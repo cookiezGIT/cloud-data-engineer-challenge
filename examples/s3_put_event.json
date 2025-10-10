@@ -1,0 +1,19 @@
+{
+  "Records": [
+    {
+      "eventVersion": "2.1",
+      "eventSource": "aws:s3",
+      "awsRegion": "us-east-1",
+      "eventTime": "2020-09-03T19:37:27.192Z",
+      "eventName": "ObjectCreated:Put",
+      "s3": {
+        "bucket": {
+          "name": "renzob-nanlabs-dev-s3"
+        },
+        "object": {
+          "key": "incoming/airbnb_listings_sample.csv"
+        }
+      }
+    }
+  ]
+}

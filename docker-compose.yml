@@ -1,0 +1,42 @@
+services:
+  postgis:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: apppass
+      POSTGRES_DB: appdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./docker/initdb:/docker-entrypoint-initdb.d
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+
+  api:
+    build:
+      context: ./lambda/api
+      dockerfile: Dockerfile
+    environment:
+      DB_HOST: postgis
+      DB_NAME: appdb
+      DB_USER: appuser
+      DB_PASS: apppass
+      DB_PORT: "5432"
+      TABLE_NAME: aggregated_city_stats
+    depends_on:
+      - postgis
+    ports:
+      - "8000:8000"
+
+volumes:
+  minio-data: {}

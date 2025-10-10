@@ -1,0 +1,9 @@
+FROM public.ecr.aws/lambda/python:3.10 as base
+
+# Local image only used by docker-compose (runs uvicorn), so install deps
+RUN pip install fastapi==0.115.5 mangum==0.17.0 psycopg2-binary==2.9.9 uvicorn==0.30.6 boto3==1.34.162
+
+WORKDIR /var/task
+COPY . /var/task
+
+CMD ["python","main.py"]
