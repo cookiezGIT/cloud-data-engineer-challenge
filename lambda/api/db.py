@@ -16,10 +16,10 @@ def _conn_params_from_env():
 
 def get_conn():
     p = _conn_params_from_env()
-    print(json.dumps({"level":"INFO","msg":"psql_connect_try","host":p["host"],"port":p["port"],"db":p["database"]})); sys.stdout.flush()
     conn = psycopg2.connect(**p)
     conn.autocommit = True
     with conn.cursor() as cur:
+        # Extensions & table
         cur.execute("CREATE EXTENSION IF NOT EXISTS postgis;")
         cur.execute("""
         CREATE TABLE IF NOT EXISTS aggregated_city_stats(
@@ -29,4 +29,19 @@ def get_conn():
             geom geometry(Point,4326) NULL
         );
         """)
+
+        # ---- Indexes (idempotent) ----
+        cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_agg_count_city
+        ON aggregated_city_stats (listing_count DESC, city ASC);
+        """)
+        cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_agg_city
+        ON aggregated_city_stats (city);
+        """)
+        cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_agg_geom
+        ON aggregated_city_stats USING GIST (geom);
+        """)
     return conn
+

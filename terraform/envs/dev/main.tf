@@ -62,7 +62,6 @@ module "lambdas" {
   ]
 }
 
-
 module "apigw" {
   source            = "../../modules/apigw"
   name              = local.name_prefix
@@ -70,14 +69,23 @@ module "apigw" {
   lambda_invoke_arn = module.lambdas.api_lambda_invoke_arn
 }
 
+module "backup" {
+  source       = "../../modules/backup"
+  resource_arn = module.rds.instance_arn
+}
+
+
 # S3 → ingest Lambda notification
 resource "aws_s3_bucket_notification" "s3_to_lambda" {
   bucket = module.s3.bucket
+
   lambda_function {
     lambda_function_arn = module.lambdas.ingest_lambda_arn
-    events              = ["s3:ObjectCreated:Put"]
+    events              = ["s3:ObjectCreated:*"] # cover Put, Copy, MPU complete, etc.
+    filter_suffix       = ".csv"
     filter_prefix       = "incoming/"
   }
+
   depends_on = [module.lambdas, module.s3, aws_lambda_permission.allow_s3_invoke]
 }
 
@@ -92,3 +100,4 @@ resource "aws_lambda_permission" "allow_s3_invoke" {
 output "api_base_url" { value = module.apigw.base_url }
 output "s3_bucket" { value = module.s3.bucket }
 output "db_endpoint" { value = module.rds.endpoint }
+output "ingest_lambda_name" { value = module.lambdas.ingest_lambda_name }

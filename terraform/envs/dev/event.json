@@ -1,9 +1,13 @@
 {
-  "Records": [{
-    "eventVersion": "2.1",
-    "eventSource": "aws:s3",
-    "awsRegion": "us-east-1",
-    "eventName": "ObjectCreated:Put",
-    "s3": { "bucket": { "name": "renzob-nanlabs-dev-s3-bbcd2b" }, "object": { "key": "incoming/airbnb_listings_sample.csv" } }
-  }]
+  "Records": [
+    {
+      "eventSource": "aws:s3",
+      "awsRegion": "us-east-1",
+      "eventName": "ObjectCreated:Put",
+      "s3": {
+        "bucket": { "name": "renzob-nanlabs-dev-s3-bbcd2b" },
+        "object": { "key": "incoming/airbnb_listings_sample.csv" }
+      }
+    }
+  ]
 }

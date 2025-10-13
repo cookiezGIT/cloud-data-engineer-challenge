@@ -6,9 +6,44 @@ def log(msg, **kw):
     print(json.dumps({"t": time.time(), "level": "INFO", "msg": msg, **kw}))
     sys.stdout.flush()
 
-
 TABLE = os.getenv("TABLE_NAME", "aggregated_city_stats")
 BUCKET = os.getenv("BUCKET_NAME")
+ALLOWED_CITIES = None  # or set a list if you want strict allowlist
+
+def _clean_price(val):
+    if val in (None, "", "NULL"): return None
+    # handle "1,234.56" and EU decimal commas like "6,81"
+    s = str(val).strip()
+    if s.count(",") == 1 and s.count(".") == 0:
+        s = s.replace(",", ".")
+    else:
+        s = s.replace(",", "")
+    try:
+        x = float(s)
+        if x < 0 or x > 10000:  # sanity bounds
+            return None
+        return x
+    except: 
+        return None
+
+def _normalize_city(c):
+    if c is None: return None
+    c = str(c).strip()
+    if not c: return None
+    return c.title()  # "berlin" -> "Berlin", "new york" -> "New York"
+
+def _validate_rows(rows):
+    good, bad = [], []
+    for r in rows:
+        city = _normalize_city(r.get("city"))
+        price = _clean_price(r.get("price"))
+        if city is None: 
+            bad.append({"reason":"missing_city", "row":r}); continue
+        if ALLOWED_CITIES and city not in ALLOWED_CITIES:
+            bad.append({"reason":"city_not_allowed", "row":r}); continue
+        # price is optional per your spec; it's fine if None
+        good.append({"city": city, "price": price})
+    return good, bad
 
 def _aggregate(rows):
     stats = {}
@@ -59,13 +94,19 @@ def handler(event, context):
     text = body.decode("utf-8")
     reader = csv.DictReader(io.StringIO(text))
     rows = list(reader)
-    log("csv_parsed", rows=len(rows))
+    valid, invalid = _validate_rows(rows)
+    data = _aggregate(valid)
+
+    log("csv_parsed", rows=len(valid))
 
     log("db_connect_before")
     conn = get_conn()
     log("db_connect_after")
 
-    _upsert(conn, _aggregate(rows))
+    _upsert(conn, data)
+    with conn.cursor() as cur:
+        cur.execute("ANALYZE aggregated_city_stats;")
+
     conn.close()
     log("done")
     return {"status": "ok"}
@@ -78,7 +119,6 @@ if __name__ == "__main__":
     os.environ.setdefault("AWS_SECRET_ACCESS_KEY", "minio123")
     os.environ.setdefault("AWS_ENDPOINT_URL", "http://localhost:9000")
     os.environ.setdefault("BUCKET_NAME", "nanlabs")
-    # Load file directly instead of S3 event
     import pandas as pd
     rows = pd.read_csv("../../examples/airbnb_listings_sample.csv").to_dict(orient="records")
     data = _aggregate(rows)

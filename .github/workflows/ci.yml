@@ -1,0 +1,22 @@
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [ main, dev ]
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with: { terraform_version: 1.9.5 }
+      - name: Terraform fmt
+        run: terraform fmt -check -recursive
+      - name: Terraform validate
+        working-directory: terraform/envs/dev
+        run: |
+          terraform init -backend=false
+          terraform validate
+      - name: Python lint (ruff)
+        uses: chartboost/ruff-action@v1
+        with: { src: "lambda" }

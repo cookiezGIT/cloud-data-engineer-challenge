@@ -1,1 +1,1 @@
-{"errorMessage": "Unable to import module 'main': attempted relative import with no known parent package", "errorType": "Runtime.ImportModuleError", "requestId": "", "stackTrace": []}
+{"status": "ok"}

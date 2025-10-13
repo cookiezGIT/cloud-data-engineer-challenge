@@ -17,15 +17,15 @@ resource "aws_cloudwatch_log_group" "ingest" {
 }
 
 resource "aws_lambda_function" "api" {
-  function_name = "${var.name}-api"
-  role          = var.role_arn
-  package_type  = "Zip"
-  filename      = "${var.build_zip_dir}/api.zip"
-  handler       = "main.handler"
-  runtime       = "python3.10"
-  timeout       = 10
-  memory_size   = 512
-  source_code_hash = filebase64sha256("${var.build_zip_dir}/api.zip")   # ⬅️ add this
+  function_name    = "${var.name}-api"
+  role             = var.role_arn
+  package_type     = "Zip"
+  filename         = "${var.build_zip_dir}/api.zip"
+  handler          = "main.handler"
+  runtime          = "python3.10"
+  timeout          = 10
+  memory_size      = 512
+  source_code_hash = filebase64sha256("${var.build_zip_dir}/api.zip") # ⬅️ add this
 
   vpc_config {
     subnet_ids         = var.subnet_ids
@@ -41,15 +41,15 @@ resource "aws_lambda_function" "api" {
 }
 
 resource "aws_lambda_function" "ingest" {
-  function_name = "${var.name}-ingest"
-  role          = var.role_arn
-  package_type  = "Zip"
-  filename      = "${var.build_zip_dir}/ingest.zip"
-  handler       = "main.handler"
-  runtime       = "python3.10"
-  timeout       = 120
-  memory_size   = 1024
-  source_code_hash = filebase64sha256("${var.build_zip_dir}/ingest.zip")  # ⬅️ add this
+  function_name    = "${var.name}-ingest"
+  role             = var.role_arn
+  package_type     = "Zip"
+  filename         = "${var.build_zip_dir}/ingest.zip"
+  handler          = "main.handler"
+  runtime          = "python3.10"
+  timeout          = 120
+  memory_size      = 1024
+  source_code_hash = filebase64sha256("${var.build_zip_dir}/ingest.zip") # ⬅️ add this
 
   vpc_config {
     subnet_ids         = var.subnet_ids
@@ -64,8 +64,35 @@ resource "aws_lambda_function" "ingest" {
   depends_on = [aws_cloudwatch_log_group.ingest]
 }
 
+resource "aws_sns_topic" "alerts" { name = "${var.name}-alerts" }
 
-output "api_lambda_arn"        { value = aws_lambda_function.api.arn }
+resource "aws_cloudwatch_metric_alarm" "api_errors" {
+  alarm_name          = "${var.name}-api-errors"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  threshold           = 0
+  metric_name         = "Errors"
+  namespace           = "AWS/Lambda"
+  period              = 300
+  statistic           = "Sum"
+  dimensions          = { FunctionName = aws_lambda_function.api.function_name }
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+}
+
+resource "aws_cloudwatch_metric_alarm" "ingest_errors" {
+  alarm_name          = "${var.name}-ingest-errors"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  threshold           = 0
+  metric_name         = "Errors"
+  namespace           = "AWS/Lambda"
+  period              = 300
+  statistic           = "Sum"
+  dimensions          = { FunctionName = aws_lambda_function.ingest.function_name }
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+}
+
+output "api_lambda_arn" { value = aws_lambda_function.api.arn }
 output "api_lambda_invoke_arn" { value = aws_lambda_function.api.invoke_arn }
-output "ingest_lambda_arn"     { value = aws_lambda_function.ingest.arn }
-output "ingest_lambda_name"    { value = aws_lambda_function.ingest.function_name }
+output "ingest_lambda_arn" { value = aws_lambda_function.ingest.arn }
+output "ingest_lambda_name" { value = aws_lambda_function.ingest.function_name }

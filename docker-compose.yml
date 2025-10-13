@@ -9,6 +9,11 @@ services:
       - "5432:5432"
     volumes:
       - ./docker/initdb:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appuser -d appdb"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
 
   minio:
     image: minio/minio:latest
@@ -37,6 +42,11 @@ services:
       - postgis
     ports:
       - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket;s=socket.socket();s.connect(('localhost',8000));print('ok')"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
 
 volumes:
   minio-data: {}
