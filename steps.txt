@@ -1,0 +1,34 @@
+$env:AWS_PROFILE = "nanlabs-dev"
+$env:AWS_REGION  = "us-east-1"   # belt & suspenders
+
+cd terraform\envs\dev
+terraform init -upgrade
+terraform apply -var="prefix=renzob-nanlabs" -var="env=dev" -auto-approve
+
+
+# Default: rebuild zips, apply TF, upload CSV, tail logs, query API
+.\setup_nanlabs_dev.ps1
+
+# Skip rebuild (just re-apply and test)
+.\setup_nanlabs_dev.ps1 -Rebuild:$false
+
+# Skip apply (keep current infra), only upload and test
+.\setup_nanlabs_dev.ps1 -Apply:$false
+
+# Use a different CSV and fetch only top 50
+.\setup_nanlabs_dev.ps1 -CsvPath .\examples\airbnb_listings_sample.csv -Limit 50
+
+# Filter by city
+.\setup_nanlabs_dev.ps1 -City "Berlin"
+
+# Don’t tail logs
+.\setup_nanlabs_dev.ps1 -TailLogs:$false
+
+# Prompted confirmation ("Type DESTROY")
+.\destroy_nanlabs_dev.ps1
+
+# Skip prompt
+.\destroy_nanlabs_dev.ps1 -Force
+
+# Use a different AWS profile/region
+.\destroy_nanlabs_dev.ps1 -Profile my-other-profile -Region us-east-1

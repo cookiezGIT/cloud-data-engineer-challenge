@@ -28,10 +28,11 @@ def aggregated_data(
             if city:
                 cur.execute(f"""
                     SELECT city, listing_count, avg_price
-                    FROM {TABLE} WHERE city = %s
+                    FROM {TABLE}
+                    WHERE lower(city) = lower(%s)
                     ORDER BY listing_count DESC, city ASC
                     LIMIT %s
-                """, (city.title(), limit))
+                """, (city, limit))
             else:
                 cur.execute(f"""
                     SELECT city, listing_count, avg_price

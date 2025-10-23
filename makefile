@@ -15,3 +15,13 @@ build-linux-ingest:
 
 build-linux-all: build-linux-api build-linux-ingest
 	powershell -NoProfile -ExecutionPolicy Bypass -Command "Write-Output 'All lambda zips ready under build/'"
+
+build-linux-admin:
+	$${P}=(Get-Location).Path; 
+	Remove-Item -Recurse -Force 'build/admin_sql' -ErrorAction Ignore; 
+	New-Item -ItemType Directory -Force 'build/admin_sql/package' | Out-Null; 
+	docker run --rm --entrypoint /bin/sh -v "$$($$P):/var/task" -w /var/task public.ecr.aws/lambda/python:3.10 -c "pip install -r lambda/admin_sql/requirements.txt -t build/admin_sql/package"; 
+	Copy-Item -Recurse -Force 'lambda/admin_sql/*' 'build/admin_sql/package/'; 
+	if (Test-Path 'build/admin_sql.zip') { Remove-Item 'build/admin_sql.zip' }; 
+	Compress-Archive -Path 'build/admin_sql/package/*' -DestinationPath 'build/admin_sql.zip'; 
+	Write-Output 'OK: build/admin_sql.zip'
