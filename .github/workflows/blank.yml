@@ -1,0 +1,20 @@
+name: Generate Data
+on:
+  schedule:
+    - cron: '0 * * * *' # Runs every hour
+  workflow_dispatch: # Allows you to run it manually
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Make a change
+        run: echo "Last update $(date)" > heartbeat.txt
+      - name: Commit and Push
+        run: |
+          git config --global user.name 'Data-Bot'
+          git config --global user.email 'bot@example.com'
+          git add heartbeat.txt
+          git commit -m "Automated data sync: $(date)"
+          git push
